@@ -23,6 +23,7 @@
 #include "llvm/MC/MCSectionSPIRV.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
+#include "llvm/MC/MCSectionMiden.h"
 #include "llvm/Support/Casting.h"
 
 using namespace llvm;
@@ -1020,6 +1021,89 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
       /* MultiSymbolsAllowed */ true, ".dwmac", XCOFF::SSUBTYP_DWMAC);
 }
 
+void MCObjectFileInfo::initMidenMCObjectFileInfo(const Triple &T) {
+  TextSection = Ctx->getMidenSection(".text", SectionKind::getText());
+  DataSection = Ctx->getMidenSection(".data", SectionKind::getData());
+
+  DwarfLineSection =
+      Ctx->getMidenSection(".debug_line", SectionKind::getMetadata());
+  DwarfLineStrSection =
+      Ctx->getMidenSection(".debug_line_str", SectionKind::getMetadata(),
+                          wasm::WASM_SEG_FLAG_STRINGS);
+  DwarfStrSection = Ctx->getMidenSection(
+      ".debug_str", SectionKind::getMetadata(), wasm::WASM_SEG_FLAG_STRINGS);
+  DwarfLocSection =
+      Ctx->getMidenSection(".debug_loc", SectionKind::getMetadata());
+  DwarfAbbrevSection =
+      Ctx->getMidenSection(".debug_abbrev", SectionKind::getMetadata());
+  DwarfARangesSection = Ctx->getMidenSection(".debug_aranges", SectionKind::getMetadata());
+  DwarfRangesSection =
+      Ctx->getMidenSection(".debug_ranges", SectionKind::getMetadata());
+  DwarfMacinfoSection =
+      Ctx->getMidenSection(".debug_macinfo", SectionKind::getMetadata());
+  DwarfMacroSection =
+      Ctx->getMidenSection(".debug_macro", SectionKind::getMetadata());
+  DwarfCUIndexSection = Ctx->getMidenSection(".debug_cu_index", SectionKind::getMetadata());
+  DwarfTUIndexSection = Ctx->getMidenSection(".debug_tu_index", SectionKind::getMetadata());
+  DwarfInfoSection =
+      Ctx->getMidenSection(".debug_info", SectionKind::getMetadata());
+  DwarfFrameSection = Ctx->getMidenSection(".debug_frame", SectionKind::getMetadata());
+  DwarfPubNamesSection = Ctx->getMidenSection(".debug_pubnames", SectionKind::getMetadata());
+  DwarfPubTypesSection = Ctx->getMidenSection(".debug_pubtypes", SectionKind::getMetadata());
+  DwarfGnuPubNamesSection =
+      Ctx->getMidenSection(".debug_gnu_pubnames", SectionKind::getMetadata());
+  DwarfGnuPubTypesSection =
+      Ctx->getMidenSection(".debug_gnu_pubtypes", SectionKind::getMetadata());
+
+  DwarfDebugNamesSection =
+      Ctx->getMidenSection(".debug_names", SectionKind::getMetadata());
+  DwarfStrOffSection =
+      Ctx->getMidenSection(".debug_str_offsets", SectionKind::getMetadata());
+  DwarfAddrSection =
+      Ctx->getMidenSection(".debug_addr", SectionKind::getMetadata());
+  DwarfRnglistsSection =
+      Ctx->getMidenSection(".debug_rnglists", SectionKind::getMetadata());
+  DwarfLoclistsSection =
+      Ctx->getMidenSection(".debug_loclists", SectionKind::getMetadata());
+
+  // Fission Sections
+  DwarfInfoDWOSection =
+      Ctx->getMidenSection(".debug_info.dwo", SectionKind::getMetadata());
+  DwarfTypesDWOSection =
+      Ctx->getMidenSection(".debug_types.dwo", SectionKind::getMetadata());
+  DwarfAbbrevDWOSection =
+      Ctx->getMidenSection(".debug_abbrev.dwo", SectionKind::getMetadata());
+  DwarfStrDWOSection =
+      Ctx->getMidenSection(".debug_str.dwo", SectionKind::getMetadata(),
+                          wasm::WASM_SEG_FLAG_STRINGS);
+  DwarfLineDWOSection =
+      Ctx->getMidenSection(".debug_line.dwo", SectionKind::getMetadata());
+  DwarfLocDWOSection =
+      Ctx->getMidenSection(".debug_loc.dwo", SectionKind::getMetadata());
+  DwarfStrOffDWOSection =
+      Ctx->getMidenSection(".debug_str_offsets.dwo", SectionKind::getMetadata());
+  DwarfRnglistsDWOSection =
+      Ctx->getMidenSection(".debug_rnglists.dwo", SectionKind::getMetadata());
+  DwarfMacinfoDWOSection =
+      Ctx->getMidenSection(".debug_macinfo.dwo", SectionKind::getMetadata());
+  DwarfMacroDWOSection =
+      Ctx->getMidenSection(".debug_macro.dwo", SectionKind::getMetadata());
+
+  DwarfLoclistsDWOSection =
+      Ctx->getMidenSection(".debug_loclists.dwo", SectionKind::getMetadata());
+
+  // DWP Sections
+  DwarfCUIndexSection =
+      Ctx->getMidenSection(".debug_cu_index", SectionKind::getMetadata());
+  DwarfTUIndexSection =
+      Ctx->getMidenSection(".debug_tu_index", SectionKind::getMetadata());
+
+  // Miden use data section for LSDA.
+  // section, as in -function-sections, to facilitate lld's --gc-section.
+  LSDASection = Ctx->getMidenSection(".rodata.gcc_except_table",
+                                    SectionKind::getReadOnlyWithRel());
+}
+
 void MCObjectFileInfo::initDXContainerObjectFileInfo(const Triple &T) {
   // At the moment the DXBC section should end up empty.
   TextSection = Ctx->getDXContainerSection("DXBC", SectionKind::getText());
@@ -1075,6 +1159,9 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
   case MCContext::IsDXContainer:
     initDXContainerObjectFileInfo(TheTriple);
     break;
+  case MCContext::IsMiden:
+    initMidenMCObjectFileInfo(TheTriple);
+    break;
   }
 }
 
@@ -1086,6 +1173,9 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
                               utostr(Hash), /*IsComdat=*/true);
   case Triple::Wasm:
     return Ctx->getWasmSection(Name, SectionKind::getMetadata(), 0,
+                               utostr(Hash), MCContext::GenericSectionID);
+  case Triple::Miden:
+    return Ctx->getMidenSection(Name, SectionKind::getMetadata(), 0,
                                utostr(Hash), MCContext::GenericSectionID);
   case Triple::MachO:
   case Triple::COFF:

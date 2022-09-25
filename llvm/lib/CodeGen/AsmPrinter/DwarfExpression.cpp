@@ -732,3 +732,16 @@ void DwarfExpression::addWasmLocation(unsigned Index, uint64_t Offset) {
     LocationKind = Implicit;
   }
 }
+
+void DwarfExpression::addMidenLocation(unsigned Index, uint64_t Offset) {
+  emitOp(dwarf::DW_OP_MIDEN_location);
+  emitUnsigned(Index == 4/*TI_LOCAL_INDIRECT*/ ? 0/*TI_LOCAL*/ : Index);
+  emitUnsigned(Offset);
+  if (Index == 4 /*TI_LOCAL_INDIRECT*/) {
+    assert(LocationKind == Unknown);
+    LocationKind = Memory;
+  } else {
+    assert(LocationKind == Implicit || LocationKind == Unknown);
+    LocationKind = Implicit;
+  }
+}

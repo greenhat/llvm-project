@@ -5622,6 +5622,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   case llvm::Triple::COFF:
   case llvm::Triple::ELF:
   case llvm::Triple::Wasm:
+  case llvm::Triple::Miden:
     GV->setSection("cfstring");
     break;
   case llvm::Triple::MachO:

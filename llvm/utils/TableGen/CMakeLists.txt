@@ -57,6 +57,7 @@ add_tablegen(llvm-tblgen LLVM
   X86ModRMFilters.cpp
   X86RecognizableInstr.cpp
   WebAssemblyDisassemblerEmitter.cpp
+  MidenDisassemblerEmitter.cpp
   CTagsEmitter.cpp
   )
 target_link_libraries(llvm-tblgen PRIVATE LLVMTableGenGlobalISel)

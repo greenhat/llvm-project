@@ -30,6 +30,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSectionMiden.h"
 #include "llvm/MC/MCSectionSPIRV.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
@@ -40,6 +41,7 @@
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/MC/MCSymbolMachO.h"
+#include "llvm/MC/MCSymbolMiden.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/MCTargetOptions.h"
@@ -114,6 +116,9 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
     break;
   case Triple::SPIRV:
     Env = IsSPIRV;
+    break;
+  case Triple::Miden:
+    Env = IsMiden;
     break;
   case Triple::UnknownObjectFormat:
     report_fatal_error("Cannot initialize MC for unknown object file format.");
@@ -245,6 +250,8 @@ MCSymbol *MCContext::createSymbolImpl(const StringMapEntry<bool> *Name,
                 "MCSymbol classes must be trivially destructible");
   static_assert(std::is_trivially_destructible<MCSymbolXCOFF>(),
                 "MCSymbol classes must be trivially destructible");
+  static_assert(std::is_trivially_destructible<MCSymbolMiden>(),
+                "MCSymbol classes must be trivially destructible");
 
   switch (getObjectFileType()) {
   case MCContext::IsCOFF:
@@ -264,6 +271,8 @@ MCSymbol *MCContext::createSymbolImpl(const StringMapEntry<bool> *Name,
   case MCContext::IsSPIRV:
     return new (Name, *this)
         MCSymbol(MCSymbol::SymbolKindUnset, Name, IsTemporary);
+  case MCContext::IsMiden:
+    return new (Name, *this) MCSymbolMiden(Name, IsTemporary);
   }
   return new (Name, *this) MCSymbol(MCSymbol::SymbolKindUnset, Name,
                                     IsTemporary);
@@ -728,6 +737,52 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
 
   MCSectionWasm *Result = new (WasmAllocator.Allocate())
       MCSectionWasm(CachedName, Kind, Flags, GroupSym, UniqueID, Begin);
+  Entry.second = Result;
+
+  auto *F = new MCDataFragment();
+  Result->getFragmentList().insert(Result->begin(), F);
+  F->setParent(Result);
+  Begin->setFragment(F);
+
+  return Result;
+}
+
+MCSectionMiden *MCContext::getMidenSection(const Twine &Section, SectionKind K,
+                                         unsigned Flags, const Twine &Group,
+                                         unsigned UniqueID,
+                                         const char *BeginSymName) {
+  MCSymbolMiden *GroupSym = nullptr;
+  if (!Group.isTriviallyEmpty() && !Group.str().empty()) {
+    GroupSym = cast<MCSymbolMiden>(getOrCreateSymbol(Group));
+    GroupSym->setComdat(true);
+  }
+
+  return getMidenSection(Section, K, Flags, GroupSym, UniqueID, BeginSymName);
+}
+
+MCSectionMiden *MCContext::getMidenSection(const Twine &Section, SectionKind Kind,
+                                         unsigned Flags,
+                                         const MCSymbolMiden *GroupSym,
+                                         unsigned UniqueID,
+                                         const char *BeginSymName) {
+  StringRef Group = "";
+  if (GroupSym)
+    Group = GroupSym->getName();
+  // Do the lookup, if we have a hit, return it.
+  auto IterBool = MidenUniquingMap.insert(
+      std::make_pair(MidenSectionKey{Section.str(), Group, UniqueID}, nullptr));
+  auto &Entry = *IterBool.first;
+  if (!IterBool.second)
+    return Entry.second;
+
+  StringRef CachedName = Entry.first.SectionName;
+
+  MCSymbol *Begin = createSymbol(CachedName, true, false);
+  Symbols[Begin->getName()] = Begin;
+  cast<MCSymbolMiden>(Begin)->setType(miden::MIDEN_SYMBOL_TYPE_SECTION);
+
+  MCSectionMiden *Result = new (MidenAllocator.Allocate())
+      MCSectionMiden(CachedName, Kind, Flags, GroupSym, UniqueID, Begin);
   Entry.second = Result;
 
   auto *F = new MCDataFragment();

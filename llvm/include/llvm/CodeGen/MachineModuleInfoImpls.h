@@ -113,6 +113,17 @@ public:
   StringSet<> MachineSymbolsUsed;
 };
 
+/// MachineModuleInfoMiden - This is a MachineModuleInfoImpl implementation
+/// for Miden targets.
+class MachineModuleInfoMiden : public MachineModuleInfoImpl {
+  virtual void anchor(); // Out of line virtual method.
+
+public:
+  MachineModuleInfoMiden(const MachineModuleInfo &) {}
+
+  StringSet<> MachineSymbolsUsed;
+};
+
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_MACHINEMODULEINFOIMPLS_H

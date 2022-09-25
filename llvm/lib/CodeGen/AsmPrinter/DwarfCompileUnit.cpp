@@ -31,6 +31,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolWasm.h"
+#include "llvm/MC/MCSymbolMiden.h"
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -517,6 +518,48 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
         DIExpressionCursor Cursor({});
         DwarfExpr.addWasmLocation(FrameBase.Location.WasmLoc.Kind,
             FrameBase.Location.WasmLoc.Index);
+        DwarfExpr.addExpression(std::move(Cursor));
+        addBlock(*SPDie, dwarf::DW_AT_frame_base, DwarfExpr.finalize());
+      }
+      break;
+    }
+    case TargetFrameLowering::DwarfFrameBase::MidenFrameBase: {
+      const unsigned TI_GLOBAL_RELOC = 3;
+      if (FrameBase.Location.MidenLoc.Kind == TI_GLOBAL_RELOC) {
+        // These need to be relocatable.
+        assert(FrameBase.Location.MidenLoc.Index == 0);  // Only SP so far.
+        auto SPSym = cast<MCSymbolMiden>(
+          Asm->GetExternalSymbolSymbol("__stack_pointer"));
+        // FIXME: this repeats what WebAssemblyMCInstLower::
+        // GetExternalSymbolSymbol does, since if there's no code that
+        // refers to this symbol, we have to set it here.
+        SPSym->setType(miden::MIDEN_SYMBOL_TYPE_GLOBAL);
+        SPSym->setGlobalType(miden::MidenGlobalType{
+            uint8_t(Asm->getSubtargetInfo().getTargetTriple().getArch() ==
+                            Triple::miden
+                        ? miden::MIDEN_TYPE_I64
+                        : miden::MIDEN_TYPE_I32),
+            true});
+        DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+        addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_MIDEN_location);
+        addSInt(*Loc, dwarf::DW_FORM_sdata, TI_GLOBAL_RELOC);
+        if (!isDwoUnit()) {
+          addLabel(*Loc, dwarf::DW_FORM_data4, SPSym);
+        } else {
+          // FIXME: when writing dwo, we need to avoid relocations. Probably
+          // the "right" solution is to treat globals the way func and data
+          // symbols are (with entries in .debug_addr).
+          // For now, since we only ever use index 0, this should work as-is.
+          addUInt(*Loc, dwarf::DW_FORM_data4, FrameBase.Location.MidenLoc.Index);
+        }
+        addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_stack_value);
+        addBlock(*SPDie, dwarf::DW_AT_frame_base, Loc);
+      } else {
+        DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+        DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
+        DIExpressionCursor Cursor({});
+        DwarfExpr.addMidenLocation(FrameBase.Location.MidenLoc.Kind,
+            FrameBase.Location.MidenLoc.Index);
         DwarfExpr.addExpression(std::move(Cursor));
         addBlock(*SPDie, dwarf::DW_AT_frame_base, DwarfExpr.finalize());
       }

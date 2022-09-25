@@ -23,6 +23,7 @@ enum class ExceptionHandling {
   WinEH,    ///< Windows Exception Handling
   Wasm,     ///< WebAssembly Exception Handling
   AIX,      ///< AIX Exception Handling
+  Miden,    ///< Miden Exception Handling
 };
 
 enum class DebugCompressionType {

@@ -73,6 +73,7 @@ class TargetRegisterClass;
 class TargetSubtargetInfo;
 struct WasmEHFuncInfo;
 struct WinEHFuncInfo;
+struct MidenEHFuncInfo;
 
 template <> struct ilist_alloc_traits<MachineBasicBlock> {
   void deleteNode(MachineBasicBlock *MBB);
@@ -283,6 +284,10 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   // Keeps track of Wasm exception handling related data. This will be null for
   // functions that aren't using a wasm EH personality.
   WasmEHFuncInfo *WasmEHInfo = nullptr;
+
+  // Keeps track of Miden exception handling related data. This will be null for
+  // functions that aren't using a wasm EH personality.
+  MidenEHFuncInfo *MidenEHInfo = nullptr;
 
   // Keeps track of Windows exception handling related data. This will be null
   // for functions that aren't using a funclet-based EH personality.
@@ -693,6 +698,12 @@ public:
   /// exception handling.
   const WasmEHFuncInfo *getWasmEHFuncInfo() const { return WasmEHInfo; }
   WasmEHFuncInfo *getWasmEHFuncInfo() { return WasmEHInfo; }
+
+  /// getMidenEHFuncInfo - Return information about how the current function uses
+  /// Miden exception handling. Returns null for functions that don't use wasm
+  /// exception handling.
+  const MidenEHFuncInfo *getMidenEHFuncInfo() const { return MidenEHInfo; }
+  MidenEHFuncInfo *getMidenEHFuncInfo() { return MidenEHInfo; }
 
   /// getWinEHFuncInfo - Return information about how the current function uses
   /// Windows exception handling. Returns null for functions that don't use

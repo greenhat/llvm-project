@@ -981,6 +981,8 @@ void TargetPassConfig::addPassesToHandleExceptions() {
     addPass(createWinEHPass(/*DemoteCatchSwitchPHIOnly=*/false));
     addPass(createWasmEHPass());
     break;
+  case ExceptionHandling::Miden:
+    // fallthrough to None for now
   case ExceptionHandling::None:
     addPass(createLowerInvokePass());
 

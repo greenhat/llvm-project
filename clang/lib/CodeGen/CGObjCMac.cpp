@@ -5071,6 +5071,7 @@ std::string CGObjCCommonMac::GetSectionName(StringRef Section,
   case llvm::Triple::SPIRV:
   case llvm::Triple::XCOFF:
   case llvm::Triple::DXContainer:
+  case llvm::Triple::Miden:
     llvm::report_fatal_error(
         "Objective-C support is unimplemented for object file format");
   }

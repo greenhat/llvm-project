@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMMC
   MCAsmInfoELF.cpp
   MCAsmInfoGOFF.cpp
   MCAsmInfoWasm.cpp
+  MCAsmInfoMiden.cpp
   MCAsmInfoXCOFF.cpp
   MCAsmMacro.cpp
   MCAsmStreamer.cpp
@@ -45,6 +46,7 @@ add_llvm_component_library(LLVMMC
   MCSectionMachO.cpp
   MCSectionWasm.cpp
   MCSectionXCOFF.cpp
+  MCSectionMiden.cpp
   MCStreamer.cpp
   MCSPIRVStreamer.cpp
   MCSubtargetInfo.cpp
@@ -56,6 +58,8 @@ add_llvm_component_library(LLVMMC
   MCValue.cpp
   MCWasmObjectTargetWriter.cpp
   MCWasmStreamer.cpp
+  MCMidenObjectTargetWriter.cpp
+  MCMidenStreamer.cpp
   MCWin64EH.cpp
   MCWinCOFFStreamer.cpp
   MCWinEH.cpp
@@ -67,6 +71,7 @@ add_llvm_component_library(LLVMMC
   SubtargetFeature.cpp
   TargetRegistry.cpp
   WasmObjectWriter.cpp
+  MidenObjectWriter.cpp
   WinCOFFObjectWriter.cpp
   XCOFFObjectWriter.cpp
 

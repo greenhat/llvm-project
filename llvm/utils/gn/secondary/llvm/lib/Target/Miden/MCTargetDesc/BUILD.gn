@@ -1,0 +1,66 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("MidenGenAsmWriter") {
+  visibility = [ ":MCTargetDesc" ]
+  args = [ "-gen-asm-writer" ]
+  td_file = "../Miden.td"
+}
+
+tablegen("MidenGenMCCodeEmitter") {
+  visibility = [ ":MCTargetDesc" ]
+  args = [ "-gen-emitter" ]
+  td_file = "../Miden.td"
+}
+
+tablegen("MidenGenRegisterInfo") {
+  visibility = [ ":tablegen" ]
+  args = [ "-gen-register-info" ]
+  td_file = "../Miden.td"
+}
+
+tablegen("MidenGenSubtargetInfo") {
+  visibility = [ ":MCTargetDesc" ]
+  args = [ "-gen-subtarget" ]
+  td_file = "../Miden.td"
+}
+
+# This should contain tablegen targets generating .inc files included
+# by other targets. .inc files only used by .cpp files in this directory
+# should be in deps on the static_library instead.
+group("tablegen") {
+  visibility = [
+    ":MCTargetDesc",
+    "../Utils",
+  ]
+  public_deps = [ ":MidenGenRegisterInfo" ]
+}
+
+static_library("MCTargetDesc") {
+  output_name = "LLVMMidenDesc"
+
+  # This should contain tablegen targets generating .inc files included
+  # by other targets. .inc files only used by .cpp files in this directory
+  # should be in deps instead.
+  public_deps = [
+    ":MidenGenSubtargetInfo",
+    ":tablegen",
+  ]
+  deps = [
+    ":MidenGenAsmWriter",
+    ":MidenGenMCCodeEmitter",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/Miden/TargetInfo",
+    "//llvm/lib/Target/Miden/Utils",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "MidenAsmBackend.cpp",
+    "MidenInstPrinter.cpp",
+    "MidenMCAsmInfo.cpp",
+    "MidenMCCodeEmitter.cpp",
+    "MidenMCTargetDesc.cpp",
+    "MidenTargetStreamer.cpp",
+    "MidenMidenObjectWriter.cpp",
+  ]
+}

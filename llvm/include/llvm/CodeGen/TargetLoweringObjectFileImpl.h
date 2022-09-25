@@ -306,6 +306,33 @@ public:
                                       const TargetMachine &TM) const override;
 };
 
+class TargetLoweringObjectFileMiden : public TargetLoweringObjectFile {
+  mutable unsigned NextUniqueID = 0;
+
+public:
+  TargetLoweringObjectFileMiden() = default;
+  ~TargetLoweringObjectFileMiden() override = default;
+
+  MCSection *getExplicitSectionGlobal(const GlobalObject *GO, SectionKind Kind,
+                                      const TargetMachine &TM) const override;
+
+  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
+                                    const TargetMachine &TM) const override;
+
+  bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
+                                           const Function &F) const override;
+
+  void InitializeMiden();
+  MCSection *getStaticCtorSection(unsigned Priority,
+                                  const MCSymbol *KeySym) const override;
+  MCSection *getStaticDtorSection(unsigned Priority,
+                                  const MCSymbol *KeySym) const override;
+
+  const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
+                                       const GlobalValue *RHS,
+                                       const TargetMachine &TM) const override;
+};
+
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_TARGETLOWERINGOBJECTFILEIMPL_H

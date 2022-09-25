@@ -50,6 +50,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSectionMiden.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCStreamer.h"
@@ -2597,4 +2598,165 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
                                        nullptr, nullptr);
 
   return getContext().getObjectFileInfo()->getTextSection();
+}
+
+
+//===----------------------------------------------------------------------===//
+//                                  Miden
+//===----------------------------------------------------------------------===//
+
+static const Comdat *getMidenComdat(const GlobalValue *GV) {
+  const Comdat *C = GV->getComdat();
+  if (!C)
+    return nullptr;
+
+  if (C->getSelectionKind() != Comdat::Any)
+    report_fatal_error("WebAssembly COMDATs only support "
+                       "SelectionKind::Any, '" + C->getName() + "' cannot be "
+                       "lowered.");
+
+  return C;
+}
+
+static unsigned getMidenSectionFlags(SectionKind K) {
+  unsigned Flags = 0;
+
+  if (K.isThreadLocal())
+    Flags |= wasm::WASM_SEG_FLAG_TLS;
+
+  if (K.isMergeableCString())
+    Flags |= wasm::WASM_SEG_FLAG_STRINGS;
+
+  // TODO(sbc): Add suport for K.isMergeableConst()
+
+  return Flags;
+}
+
+MCSection *TargetLoweringObjectFileMiden::getExplicitSectionGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+  // We don't support explict section names for functions in the wasm object
+  // format.  Each function has to be in its own unique section.
+  if (isa<Function>(GO)) {
+    return SelectSectionForGlobal(GO, Kind, TM);
+  }
+
+  StringRef Name = GO->getSection();
+
+  // Certain data sections we treat as named custom sections rather than
+  // segments within the data section.
+  // This could be avoided if all data segements (the wasm sense) were
+  // represented as their own sections (in the llvm sense).
+  // TODO(sbc): https://github.com/WebAssembly/tool-conventions/issues/138
+  if (Name == ".llvmcmd" || Name == ".llvmbc")
+    Kind = SectionKind::getMetadata();
+
+  StringRef Group = "";
+  if (const Comdat *C = getMidenComdat(GO)) {
+    Group = C->getName();
+  }
+
+  unsigned Flags = getMidenSectionFlags(Kind);
+  MCSectionMiden *Section = getContext().getMidenSection(
+      Name, Kind, Flags, Group, MCContext::GenericSectionID);
+
+  return Section;
+}
+
+static MCSectionMiden *selectMidenSectionForGlobal(
+    MCContext &Ctx, const GlobalObject *GO, SectionKind Kind, Mangler &Mang,
+    const TargetMachine &TM, bool EmitUniqueSection, unsigned *NextUniqueID) {
+  StringRef Group = "";
+  if (const Comdat *C = getMidenComdat(GO)) {
+    Group = C->getName();
+  }
+
+  bool UniqueSectionNames = TM.getUniqueSectionNames();
+  SmallString<128> Name = getSectionPrefixForGlobal(Kind);
+
+  if (const auto *F = dyn_cast<Function>(GO)) {
+    const auto &OptionalPrefix = F->getSectionPrefix();
+    if (OptionalPrefix)
+      raw_svector_ostream(Name) << '.' << *OptionalPrefix;
+  }
+
+  if (EmitUniqueSection && UniqueSectionNames) {
+    Name.push_back('.');
+    TM.getNameWithPrefix(Name, GO, Mang, true);
+  }
+  unsigned UniqueID = MCContext::GenericSectionID;
+  if (EmitUniqueSection && !UniqueSectionNames) {
+    UniqueID = *NextUniqueID;
+    (*NextUniqueID)++;
+  }
+
+  unsigned Flags = getMidenSectionFlags(Kind);
+  return Ctx.getMidenSection(Name, Kind, Flags, Group, UniqueID);
+}
+
+MCSection *TargetLoweringObjectFileMiden::SelectSectionForGlobal(
+    const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
+
+  if (Kind.isCommon())
+    report_fatal_error("mergable sections not supported yet on wasm");
+
+  // If we have -ffunction-section or -fdata-section then we should emit the
+  // global value to a uniqued section specifically for it.
+  bool EmitUniqueSection = false;
+  if (Kind.isText())
+    EmitUniqueSection = TM.getFunctionSections();
+  else
+    EmitUniqueSection = TM.getDataSections();
+  EmitUniqueSection |= GO->hasComdat();
+
+  return selectMidenSectionForGlobal(getContext(), GO, Kind, getMangler(), TM,
+                                    EmitUniqueSection, &NextUniqueID);
+}
+
+bool TargetLoweringObjectFileMiden::shouldPutJumpTableInFunctionSection(
+    bool UsesLabelDifference, const Function &F) const {
+  // We can always create relative relocations, so use another section
+  // that can be marked non-executable.
+  return false;
+}
+
+const MCExpr *TargetLoweringObjectFileMiden::lowerRelativeReference(
+    const GlobalValue *LHS, const GlobalValue *RHS,
+    const TargetMachine &TM) const {
+  // We may only use a PLT-relative relocation to refer to unnamed_addr
+  // functions.
+  if (!LHS->hasGlobalUnnamedAddr() || !LHS->getValueType()->isFunctionTy())
+    return nullptr;
+
+  // Basic correctness checks.
+  if (LHS->getType()->getPointerAddressSpace() != 0 ||
+      RHS->getType()->getPointerAddressSpace() != 0 || LHS->isThreadLocal() ||
+      RHS->isThreadLocal())
+    return nullptr;
+
+  return MCBinaryExpr::createSub(
+      MCSymbolRefExpr::create(TM.getSymbol(LHS), MCSymbolRefExpr::VK_None,
+                              getContext()),
+      MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
+}
+
+void TargetLoweringObjectFileMiden::InitializeMiden() {
+  StaticCtorSection =
+      getContext().getMidenSection(".init_array", SectionKind::getData());
+
+  // We don't use PersonalityEncoding and LSDAEncoding because we don't emit
+  // .cfi directives. We use TTypeEncoding to encode typeinfo global variables.
+  TTypeEncoding = dwarf::DW_EH_PE_absptr;
+}
+
+MCSection *TargetLoweringObjectFileMiden::getStaticCtorSection(
+    unsigned Priority, const MCSymbol *KeySym) const {
+  return Priority == UINT16_MAX ?
+         StaticCtorSection :
+         getContext().getMidenSection(".init_array." + utostr(Priority),
+                                     SectionKind::getData());
+}
+
+MCSection *TargetLoweringObjectFileMiden::getStaticDtorSection(
+    unsigned Priority, const MCSymbol *KeySym) const {
+  report_fatal_error("@llvm.global_dtors should have been lowered already");
 }

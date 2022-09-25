@@ -1,0 +1,25 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("MidenGenAsmMatcher") {
+  visibility = [ ":AsmParser" ]
+  args = [ "-gen-asm-matcher" ]
+  td_file = "../Miden.td"
+}
+
+static_library("AsmParser") {
+  output_name = "LLVMMidenAsmParser"
+  deps = [
+    ":MidenGenAsmMatcher",
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCParser",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target/Miden/MCTargetDesc",
+    "//llvm/lib/Target/Miden/TargetInfo",
+    "//llvm/lib/Target/Miden/Utils",
+  ]
+  include_dirs = [ ".." ]
+  sources = [
+    "MidenAsmParser.cpp",
+    "MidenAsmTypeCheck.cpp",
+  ]
+}

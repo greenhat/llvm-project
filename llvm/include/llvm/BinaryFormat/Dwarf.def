@@ -866,6 +866,9 @@ HANDLE_DW_OP(0xf8, PGI_omp_thread_num, 0, PGI)
 // Extensions for Fission proposal.
 HANDLE_DW_OP(0xfb, GNU_addr_index, 0, GNU)
 HANDLE_DW_OP(0xfc, GNU_const_index, 0, GNU)
+// Extensions for Miden.
+HANDLE_DW_OP(0xfd, MIDEN_location, 0, MIDEN)
+HANDLE_DW_OP(0xfe, MIDEN_location_int, 0, MIDEN)
 
 // DWARF languages.
 HANDLE_DW_LANG(0x0001, C89, 0, 2, DWARF)

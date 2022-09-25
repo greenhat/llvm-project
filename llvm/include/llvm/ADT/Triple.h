@@ -105,7 +105,8 @@ public:
     renderscript32, // 32-bit RenderScript
     renderscript64, // 64-bit RenderScript
     ve,             // NEC SX-Aurora Vector Engine
-    LastArchType = ve
+    miden,          // Miden: Miden VM
+    LastArchType = miden
   };
   enum SubArchType {
     NoSubArch,
@@ -277,6 +278,7 @@ public:
     SPIRV,
     Wasm,
     XCOFF,
+    Miden,
   };
 
 private:

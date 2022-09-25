@@ -355,7 +355,13 @@ public:
     VK_VE_TPOFF_LO32,  // symbol@tpoff_lo
 
     VK_TPREL,
-    VK_DTPREL
+    VK_DTPREL,
+
+    VK_MIDEN_TYPEINDEX, // Reference to a symbol's type (signature)
+    VK_MIDEN_TLSREL,    // Memory address relative to __tls_base
+    VK_MIDEN_MBREL,     // Memory address relative to __memory_base
+    VK_MIDEN_TBREL,     // Table index relative to __table_base
+    VK_MIDEN_GOT_TLS    // Miden global index of TLS symbol.
   };
 
 private:

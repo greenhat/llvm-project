@@ -1,0 +1,83 @@
+//==- MidenTargetTransformInfo.h - Miden-specific TTI -*- C++ -*-=//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file a TargetTransformInfo::Concept conforming object specific
+/// to the Miden target machine.
+///
+/// It uses the target's detailed information to provide more precise answers to
+/// certain TTI queries, while letting the target independent and default TTI
+/// implementations handle the rest.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIB_TARGET_MIDEN_MIDENTARGETTRANSFORMINFO_H
+#define LLVM_LIB_TARGET_MIDEN_MIDENTARGETTRANSFORMINFO_H
+
+#include "MidenTargetMachine.h"
+#include "llvm/CodeGen/BasicTTIImpl.h"
+#include <algorithm>
+
+namespace llvm {
+
+class MidenTTIImpl final : public BasicTTIImplBase<MidenTTIImpl> {
+  typedef BasicTTIImplBase<MidenTTIImpl> BaseT;
+  typedef TargetTransformInfo TTI;
+  friend BaseT;
+
+  const MidenSubtarget *ST;
+  const MidenTargetLowering *TLI;
+
+  const MidenSubtarget *getST() const { return ST; }
+  const MidenTargetLowering *getTLI() const { return TLI; }
+
+public:
+  MidenTTIImpl(const MidenTargetMachine *TM, const Function &F)
+      : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
+        TLI(ST->getTargetLowering()) {}
+
+  /// \name Scalar TTI Implementations
+  /// @{
+
+  // TODO: Implement more Scalar TTI for Miden
+
+  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const;
+
+  void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
+                               TTI::UnrollingPreferences &UP,
+                               OptimizationRemarkEmitter *ORE) const;
+
+  /// @}
+
+  /// \name Vector TTI Implementations
+  /// @{
+
+  unsigned getNumberOfRegisters(unsigned ClassID) const;
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
+  InstructionCost getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+      TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
+      TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
+      TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
+      TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None,
+      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
+      const Instruction *CxtI = nullptr);
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     unsigned Index);
+
+  /// @}
+
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const;
+
+  bool supportsTailCalls() const;
+};
+
+} // end namespace llvm
+
+#endif

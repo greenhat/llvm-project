@@ -26,6 +26,7 @@ void MachineModuleInfoMachO::anchor() {}
 void MachineModuleInfoELF::anchor() {}
 void MachineModuleInfoCOFF::anchor() {}
 void MachineModuleInfoWasm::anchor() {}
+void MachineModuleInfoMiden::anchor() {}
 
 using PairTy = std::pair<MCSymbol *, MachineModuleInfoImpl::StubValueTy>;
 static int SortSymbolPair(const PairTy *LHS, const PairTy *RHS) {

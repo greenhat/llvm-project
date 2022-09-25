@@ -83,6 +83,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case x86:            return "i386";
   case x86_64:         return "x86_64";
   case xcore:          return "xcore";
+  case miden:          return "miden";
   }
 
   llvm_unreachable("Invalid ArchType!");
@@ -771,6 +772,8 @@ static StringRef getObjectFormatTypeName(Triple::ObjectFormatType Kind) {
     return "dxcontainer";
   case Triple::SPIRV:
     return "spirv";
+  case Triple::Miden:
+    return "miden";
   }
   llvm_unreachable("unknown object format type");
 }
@@ -858,6 +861,9 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
 
   case Triple::dxil:
     return Triple::DXContainer;
+
+  case Triple::miden:
+    return Triple::Miden;
   }
   llvm_unreachable("unknown architecture");
 }
@@ -1411,6 +1417,7 @@ static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::wasm32:
   case llvm::Triple::x86:
   case llvm::Triple::xcore:
+  case llvm::Triple::miden:
     return 32;
 
   case llvm::Triple::aarch64:
@@ -1501,6 +1508,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::wasm32:
   case Triple::x86:
   case Triple::xcore:
+  case Triple::miden:
     // Already 32-bit.
     break;
 
@@ -1551,6 +1559,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::tce:
   case Triple::tcele:
   case Triple::xcore:
+  case Triple::miden:
     T.setArch(UnknownArch);
     break;
 

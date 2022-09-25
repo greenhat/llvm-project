@@ -1,0 +1,93 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("MidenGenDAGISel") {
+  visibility = [ ":LLVMMidenCodeGen" ]
+  args = [ "-gen-dag-isel" ]
+  td_file = "Miden.td"
+}
+
+tablegen("MidenGenFastISel") {
+  visibility = [ ":LLVMMidenCodeGen" ]
+  args = [ "-gen-fast-isel" ]
+  td_file = "Miden.td"
+}
+
+static_library("LLVMMidenCodeGen") {
+  deps = [
+    ":MidenGenDAGISel",
+    ":MidenGenFastISel",
+    "MCTargetDesc",
+    "TargetInfo",
+    "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/Analysis",
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/CodeGen/AsmPrinter",
+    "//llvm/lib/CodeGen/GlobalISel",
+    "//llvm/lib/CodeGen/SelectionDAG",
+    "//llvm/lib/IR",
+    "//llvm/lib/MC",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+  ]
+  include_dirs = [ "." ]
+  sources = [
+    "MidenAddMissingPrototypes.cpp",
+    "MidenArgumentMove.cpp",
+    "MidenAsmPrinter.cpp",
+    "MidenCFGSort.cpp",
+    "MidenCFGStackify.cpp",
+    "MidenDebugFixup.cpp",
+    "MidenDebugValueManager.cpp",
+    "MidenExceptionInfo.cpp",
+    "MidenExplicitLocals.cpp",
+    "MidenFastISel.cpp",
+    "MidenFixBrTableDefaults.cpp",
+    "MidenFixFunctionBitcasts.cpp",
+    "MidenFixIrreducibleControlFlow.cpp",
+    "MidenFrameLowering.cpp",
+    "MidenISelDAGToDAG.cpp",
+    "MidenISelLowering.cpp",
+    "MidenInstrInfo.cpp",
+    "MidenLateEHPrepare.cpp",
+    "MidenLowerBrUnless.cpp",
+    "MidenLowerEmscriptenEHSjLj.cpp",
+    "MidenLowerRefTypesIntPtrConv.cpp",
+    "MidenMCInstLower.cpp",
+    "MidenMCLowerPrePass.cpp",
+    "MidenMachineFunctionInfo.cpp",
+    "MidenMemIntrinsicResults.cpp",
+    "MidenNullifyDebugValueLists.cpp",
+    "MidenOptimizeLiveIntervals.cpp",
+    "MidenOptimizeReturned.cpp",
+    "MidenPeephole.cpp",
+    "MidenRegColoring.cpp",
+    "MidenRegNumbering.cpp",
+    "MidenRegStackify.cpp",
+    "MidenRegisterInfo.cpp",
+    "MidenReplacePhysRegs.cpp",
+    "MidenRuntimeLibcallSignatures.cpp",
+    "MidenSelectionDAGInfo.cpp",
+    "MidenSetP2AlignOperands.cpp",
+    "MidenSortRegion.cpp",
+    "MidenSubtarget.cpp",
+    "MidenTargetMachine.cpp",
+    "MidenTargetObjectFile.cpp",
+    "MidenTargetTransformInfo.cpp",
+  ]
+}
+
+# This is a bit different from most build files: Due to this group
+# having the directory's name, "//llvm/lib/Target/AArch64" will refer to this
+# target, which pulls in the code in this directory *and all subdirectories*.
+# For most other directories, "//llvm/lib/Foo" only pulls in the code directly
+# in "llvm/lib/Foo". The forwarding targets in //llvm/lib/Target expect this
+# different behavior.
+group("Miden") {
+  deps = [
+    ":LLVMMidenCodeGen",
+    "AsmParser",
+    "Disassembler",
+    "MCTargetDesc",
+    "TargetInfo",
+  ]
+}

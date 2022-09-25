@@ -1,0 +1,19 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("MidenGenInstrInfo") {
+  visibility = [ ":TargetInfo" ]
+  args = [ "-gen-instr-info" ]
+  td_file = "../Miden.td"
+}
+
+static_library("TargetInfo") {
+  output_name = "LLVMMidenInfo"
+
+  # This should contain tablegen targets generating .inc files included
+  # by other targets. .inc files only used by .cpp files in this directory
+  # should be in deps instead.
+  public_deps = [ ":MidenGenInstrInfo" ]
+  deps = [ "//llvm/lib/Support" ]
+  include_dirs = [ ".." ]
+  sources = [ "MidenTargetInfo.cpp" ]
+}

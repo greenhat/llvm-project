@@ -53,6 +53,7 @@ class MCSectionDXContainer;
 class MCSectionELF;
 class MCSectionGOFF;
 class MCSectionMachO;
+class MCSectionMiden;
 class MCSectionSPIRV;
 class MCSectionWasm;
 class MCSectionXCOFF;
@@ -60,6 +61,7 @@ class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
 class MCSymbolELF;
+class MCSymbolMiden;
 class MCSymbolWasm;
 class MCSymbolXCOFF;
 class MCTargetOptions;
@@ -87,7 +89,8 @@ public:
     IsSPIRV,
     IsWasm,
     IsXCOFF,
-    IsDXContainer
+    IsDXContainer,
+    IsMiden
   };
 
 private:
@@ -137,6 +140,7 @@ private:
   SpecificBumpPtrAllocator<MCSectionSPIRV> SPIRVAllocator;
   SpecificBumpPtrAllocator<MCSectionWasm> WasmAllocator;
   SpecificBumpPtrAllocator<MCSectionXCOFF> XCOFFAllocator;
+  SpecificBumpPtrAllocator<MCSectionMiden> MidenAllocator;
   SpecificBumpPtrAllocator<MCInst> MCInstAllocator;
 
   /// Bindings of names to symbols.
@@ -343,11 +347,30 @@ private:
     }
   };
 
+  struct MidenSectionKey {
+    std::string SectionName;
+    StringRef GroupName;
+    unsigned UniqueID;
+
+    MidenSectionKey(StringRef SectionName, StringRef GroupName,
+                   unsigned UniqueID)
+        : SectionName(SectionName), GroupName(GroupName), UniqueID(UniqueID) {}
+
+    bool operator<(const MidenSectionKey &Other) const {
+      if (SectionName != Other.SectionName)
+        return SectionName < Other.SectionName;
+      if (GroupName != Other.GroupName)
+        return GroupName < Other.GroupName;
+      return UniqueID < Other.UniqueID;
+    }
+  };
+
   StringMap<MCSectionMachO *> MachOUniquingMap;
   std::map<ELFSectionKey, MCSectionELF *> ELFUniquingMap;
   std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
   std::map<std::string, MCSectionGOFF *> GOFFUniquingMap;
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
+  std::map<MidenSectionKey, MCSectionMiden *> MidenUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
   StringMap<MCSectionDXContainer *> DXCUniquingMap;
   StringMap<bool> RelSecNames;
@@ -666,6 +689,30 @@ public:
                                 unsigned Flags, const MCSymbolWasm *Group,
                                 unsigned UniqueID, const char *BeginSymName);
   
+  MCSectionMiden *getMidenSection(const Twine &Section, SectionKind K,
+                                unsigned Flags = 0) {
+    return getMidenSection(Section, K, Flags, nullptr);
+  }
+
+  MCSectionMiden *getMidenSection(const Twine &Section, SectionKind K,
+                                unsigned Flags, const char *BeginSymName) {
+    return getMidenSection(Section, K, Flags, "", ~0, BeginSymName);
+  }
+
+  MCSectionMiden *getMidenSection(const Twine &Section, SectionKind K,
+                                unsigned Flags, const Twine &Group,
+                                unsigned UniqueID) {
+    return getMidenSection(Section, K, Flags, Group, UniqueID, nullptr);
+  }
+
+  MCSectionMiden *getMidenSection(const Twine &Section, SectionKind K,
+                                unsigned Flags, const Twine &Group,
+                                unsigned UniqueID, const char *BeginSymName);
+
+  MCSectionMiden *getMidenSection(const Twine &Section, SectionKind K,
+                                unsigned Flags, const MCSymbolMiden *Group,
+                                unsigned UniqueID, const char *BeginSymName);
+
   /// Get the section for the provided Section name
   MCSectionDXContainer *getDXContainerSection(StringRef Section, SectionKind K);
 

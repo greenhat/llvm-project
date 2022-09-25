@@ -29,6 +29,7 @@ enum Value {
   SGPRSpill = 1,
   ScalableVector = 2,
   WasmLocal = 3,
+  MidenLocal = 4,
   NoAlloc = 255
 };
 }
@@ -55,15 +56,20 @@ public:
 
   struct DwarfFrameBase {
     // The frame base may be either a register (the default), the CFA,
-    // or a WebAssembly-specific location description.
-    enum FrameBaseKind { Register, CFA, WasmFrameBase } Kind;
+    // a WebAssembly-specific location description, or a Miden-specific location description.
+    enum FrameBaseKind { Register, CFA, WasmFrameBase, MidenFrameBase } Kind;
     struct WasmFrameBase {
       unsigned Kind; // Wasm local, global, or value stack
+      unsigned Index;
+    };
+    struct MidenFrameBase {
+      unsigned Kind; // Miden local, global, or value stack
       unsigned Index;
     };
     union {
       unsigned Reg;
       struct WasmFrameBase WasmLoc;
+      struct MidenFrameBase MidenLoc;
     } Location;
   };
 

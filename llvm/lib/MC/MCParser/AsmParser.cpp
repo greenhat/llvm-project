@@ -759,6 +759,7 @@ extern MCAsmParserExtension *createCOFFAsmParser();
 extern MCAsmParserExtension *createGOFFAsmParser();
 extern MCAsmParserExtension *createXCOFFAsmParser();
 extern MCAsmParserExtension *createWasmAsmParser();
+extern MCAsmParserExtension *createMidenAsmParser();
 
 } // end namespace llvm
 
@@ -805,6 +806,9 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
     break;
   case MCContext::IsDXContainer:
     llvm_unreachable("DXContainer is not supported yet");
+    break;
+  case MCContext::IsMiden:
+    PlatformParser.reset(createMidenAsmParser());
     break;
   }
 

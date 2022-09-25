@@ -55,6 +55,7 @@ executable("llvm-tblgen") {
     "Types.cpp",
     "VarLenCodeEmitterGen.cpp",
     "WebAssemblyDisassemblerEmitter.cpp",
+    "MidenDisassemblerEmitter.cpp",
     "X86DisassemblerTables.cpp",
     "X86EVEX2VEXTablesEmitter.cpp",
     "X86FoldTablesEmitter.cpp",

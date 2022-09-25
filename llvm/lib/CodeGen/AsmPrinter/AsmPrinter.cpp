@@ -550,6 +550,8 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   EHStreamer *ES = nullptr;
   switch (MAI->getExceptionHandlingType()) {
+  case ExceptionHandling::Miden:
+  // fallthrough to None for now
   case ExceptionHandling::None:
     if (!needsCFIForDebug())
       break;

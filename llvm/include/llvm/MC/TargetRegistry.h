@@ -119,6 +119,11 @@ MCStreamer *createDXContainerStreamer(MCContext &Ctx,
                                       std::unique_ptr<MCObjectWriter> &&OW,
                                       std::unique_ptr<MCCodeEmitter> &&CE,
                                       bool RelaxAll);
+MCStreamer *createMidenStreamer(MCContext &Ctx,
+                               std::unique_ptr<MCAsmBackend> &&TAB,
+                               std::unique_ptr<MCObjectWriter> &&OW,
+                               std::unique_ptr<MCCodeEmitter> &&CE,
+                               bool RelaxAll);
 
 MCRelocationInfo *createMCRelocationInfo(const Triple &TT, MCContext &Ctx);
 
@@ -212,6 +217,11 @@ public:
                       std::unique_ptr<MCObjectWriter> &&OW,
                       std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll);
   using SPIRVStreamerCtorTy =
+      MCStreamer *(*)(const Triple &T, MCContext &Ctx,
+                      std::unique_ptr<MCAsmBackend> &&TAB,
+                      std::unique_ptr<MCObjectWriter> &&OW,
+                      std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll);
+  using MidenStreamerCtorTy =
       MCStreamer *(*)(const Triple &T, MCContext &Ctx,
                       std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
@@ -325,6 +335,7 @@ private:
   XCOFFStreamerCtorTy XCOFFStreamerCtorFn = nullptr;
   SPIRVStreamerCtorTy SPIRVStreamerCtorFn = nullptr;
   DXContainerStreamerCtorTy DXContainerStreamerCtorFn = nullptr;
+  MidenStreamerCtorTy MidenStreamerCtorFn = nullptr;
 
   /// Construction function for this target's null TargetStreamer, if
   /// registered (default = nullptr).
@@ -610,6 +621,14 @@ public:
       else
         S = createDXContainerStreamer(Ctx, std::move(TAB), std::move(OW),
                                       std::move(Emitter), RelaxAll);
+      break;
+    case Triple::Miden:
+      if (MidenStreamerCtorFn)
+        S = MidenStreamerCtorFn(T, Ctx, std::move(TAB), std::move(OW),
+                               std::move(Emitter), RelaxAll);
+      else
+        S = createMidenStreamer(Ctx, std::move(TAB), std::move(OW),
+                               std::move(Emitter), RelaxAll);
       break;
     }
     if (ObjectTargetStreamerCtorFn)
